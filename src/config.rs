@@ -26,10 +26,18 @@ pub enum ConfigSource {
     /// The URL was supplied directly by application code.
     Programmatic,
     /// The URL was read from a process environment variable.
-    Environment { variable: String },
+    Environment {
+        /// Name of the process environment variable that supplied the URL.
+        variable: String,
+    },
     /// The URL was read directly from a dotenv file without modifying the
     /// process environment.
-    Dotenv { path: PathBuf, variable: String },
+    Dotenv {
+        /// Path of the dotenv file that supplied the selected entry.
+        path: PathBuf,
+        /// Name of the selected dotenv entry.
+        variable: String,
+    },
 }
 
 /// PostgreSQL connection and pool configuration.

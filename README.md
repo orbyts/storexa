@@ -4,7 +4,7 @@ Storexa is a small, domain-agnostic PostgreSQL persistence foundation for Rust
 applications. It uses SQLx and deliberately does not generate application SQL
 or model application entities.
 
-Version `0.0.5` provides:
+Version `0.0.6` is the release candidate for Storexa 0.1.0. It provides:
 
 - environment and programmatic configuration
 - an asynchronous SQLx PostgreSQL pool
@@ -70,6 +70,8 @@ See [Configuration and secrets](CONFIGURATION.md) for the full contract.
 See [PostgreSQL compatibility](COMPATIBILITY.md) for verified provider and
 pooler modes, and [Data-transfer boundaries](TRANSFERS.md) for the intentionally
 deferred migration layer.
+The proposed stable surface is listed in [Public API contract](API.md), and
+security reporting guidance is in [SECURITY.md](SECURITY.md).
 
 ## Multiple connections and providers
 

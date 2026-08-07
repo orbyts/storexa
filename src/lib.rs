@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![forbid(unsafe_code)]
+
 //! Domain-agnostic PostgreSQL persistence infrastructure.
 //!
 //! Storexa owns connections, pooling, health checks, transactions, and

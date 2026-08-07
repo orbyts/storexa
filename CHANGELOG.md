@@ -1,6 +1,21 @@
 # Changelog
 
-## 0.0.5 - Unreleased
+## 0.0.6 - Unreleased
+
+### Added
+
+- A proposed 0.1 public API contract and application-owned repository example.
+- A security policy and dependency-update monitoring.
+- Crate-level enforcement for documented public APIs and no unsafe code.
+- Release-candidate checks for examples, doctests, and package construction.
+
+### Changed
+
+- SQLx-backed error variants now have classified, redacted `Debug` output;
+  deliberate callers can still inspect the source error.
+- GitHub Actions now uses the current Node 24 checkout action.
+
+## 0.0.5 - 2026-08-07
 
 ### Added
 
