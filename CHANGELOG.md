@@ -1,6 +1,23 @@
 # Changelog
 
-## 0.0.4 - Unreleased
+## 0.0.5 - Unreleased
+
+### Added
+
+- A PostgreSQL 18 CI service that exercises Storexa against a provider-neutral
+  server in addition to the manually run Neon tests.
+- A compatibility matrix distinguishing verified, expected, and unsupported
+  PostgreSQL connection modes.
+- An explicit future data-transfer boundary for native PostgreSQL tools,
+  application migrations, verification, and provider control planes.
+- Guidance for application-owned XDG configuration and secret references.
+
+### Changed
+
+- Integration-test environment variables and connection names are now
+  provider-neutral.
+
+## 0.0.4 - 2026-08-07
 
 ### Added
 

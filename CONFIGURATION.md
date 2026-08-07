@@ -45,3 +45,19 @@ not be required for ordinary Storexa database access.
 Storexa never includes connection URLs in `Debug`, tracing fields, or its own
 error messages. Applications must apply the same rule to values they obtain
 before passing them to Storexa.
+
+## Configuration-file ownership
+
+Storexa is a library and does not automatically read a machine-global
+`$XDG_CONFIG_HOME/storexa/config.toml`. A shared implicit file would couple
+otherwise independent applications and make connection precedence ambiguous.
+
+Host applications should own their non-secret configuration. For example,
+Photara may store connection names, provider labels, pool limits, and the names
+of secret environment variables in `$XDG_CONFIG_HOME/photara/config.toml`.
+Actual database URLs remain in Apogee, another secret manager, or the process
+environment.
+
+`$XDG_CONFIG_HOME/storexa/config.toml` is reserved for a future Storexa CLI or
+for explicitly requested shared machine defaults. Its absence has no effect on
+the library.

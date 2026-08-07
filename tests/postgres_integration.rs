@@ -3,21 +3,21 @@ use storexa::{Database, DatabaseConfig, Migrator, PostgresProvider};
 static MIGRATOR: Migrator = sqlx::migrate!("./tests/migrations");
 
 #[tokio::test]
-#[ignore = "requires DATABASE_URL for a disposable PostgreSQL database"]
+#[ignore = "requires STOREXA_TEST_DATABASE_URL for a disposable PostgreSQL database"]
 async fn direct_connection_migrations_and_transactions() -> storexa::Result<()> {
     initialize_tracing();
 
     let db = Database::connect(
-        DatabaseConfig::from_env_var("DATABASE_URL")?
-            .with_name("development")?
-            .with_provider(PostgresProvider::Neon)?
+        DatabaseConfig::from_env_var("STOREXA_TEST_DATABASE_URL")?
+            .with_name("primary")?
+            .with_provider(PostgresProvider::Generic)?
             .with_min_connections(0)
             .with_max_connections(2),
     )
     .await?;
 
-    assert_eq!(db.name(), "development");
-    assert_eq!(db.provider(), &PostgresProvider::Neon);
+    assert_eq!(db.name(), "primary");
+    assert_eq!(db.provider(), &PostgresProvider::Generic);
 
     assert!(!db.stats().closed);
     drop(db.acquire().await?);
@@ -73,26 +73,26 @@ async fn direct_connection_migrations_and_transactions() -> storexa::Result<()> 
 }
 
 #[tokio::test]
-#[ignore = "requires STOREXA_TEST_POOLED_DATABASE_URL"]
-async fn pooled_connection_health_check() -> storexa::Result<()> {
+#[ignore = "requires STOREXA_TEST_SECOND_DATABASE_URL"]
+async fn second_named_connection_health_check() -> storexa::Result<()> {
     initialize_tracing();
 
-    let database_url = std::env::var("STOREXA_TEST_POOLED_DATABASE_URL").map_err(|_| {
+    let database_url = std::env::var("STOREXA_TEST_SECOND_DATABASE_URL").map_err(|_| {
         storexa::StorexaError::Configuration {
-            message: "set STOREXA_TEST_POOLED_DATABASE_URL".to_owned(),
+            message: "set STOREXA_TEST_SECOND_DATABASE_URL".to_owned(),
         }
     })?;
 
     let db = Database::connect(
         DatabaseConfig::from_url(database_url)?
-            .with_name("development-pooled")?
-            .with_provider(PostgresProvider::Neon)?
+            .with_name("secondary")?
+            .with_provider(PostgresProvider::Generic)?
             .with_min_connections(0)
             .with_max_connections(2),
     )
     .await?;
-    assert_eq!(db.name(), "development-pooled");
-    assert_eq!(db.provider(), &PostgresProvider::Neon);
+    assert_eq!(db.name(), "secondary");
+    assert_eq!(db.provider(), &PostgresProvider::Generic);
     db.health_check().await?;
     db.close().await;
     assert!(db.stats().closed);
