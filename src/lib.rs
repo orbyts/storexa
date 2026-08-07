@@ -1,16 +1,26 @@
-//! Storexa is a domain-agnostic persistence foundation for Rust applications.
+//! Domain-agnostic PostgreSQL persistence infrastructure.
+//!
+//! Storexa owns connections, pooling, health checks, transactions, and
+//! migration execution. Applications remain responsible for their schemas and
+//! SQL.
+//!
+//! ```no_run
+//! use storexa::{Database, DatabaseConfig};
+//!
+//! # async fn example() -> storexa::Result<()> {
+//! let config = DatabaseConfig::from_env()?;
+//! let db = Database::connect(config).await?;
+//! db.health_check().await?;
+//! # Ok(())
+//! # }
+//! ```
 
-/// Returns Storexa's initial greeting.
-pub const fn hello() -> &'static str {
-    "Hello from Storexa!"
-}
+mod config;
+mod database;
+mod error;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn says_hello() {
-        assert_eq!(hello(), "Hello from Storexa!");
-    }
-}
+pub use config::DatabaseConfig;
+pub use database::{Database, Transaction};
+pub use error::{Result, StorexaError};
+pub use sqlx::migrate::Migrator;
+pub use sqlx::{PgPool, Postgres};

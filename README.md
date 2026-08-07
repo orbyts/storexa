@@ -1,11 +1,59 @@
 # Storexa
 
-Storexa is a reusable, domain-agnostic persistence foundation for Rust applications.
+Storexa is a small, domain-agnostic PostgreSQL persistence foundation for Rust
+applications. It uses SQLx and deliberately does not generate application SQL
+or model application entities.
 
-Version `0.0.0` reserves the crate name with a small hello-world API. Database infrastructure will arrive in a future release.
+Version `0.0.1` provides:
 
-```rust
-assert_eq!(storexa::hello(), "Hello from Storexa!");
+- environment and programmatic configuration
+- an asynchronous SQLx PostgreSQL pool
+- health checks
+- transactions
+- application-owned migration execution
+- one consistent error type
+- `tracing` instrumentation
+
+Neon, Supabase, hosted PostgreSQL, and local PostgreSQL use the same Storexa
+PostgreSQL implementation. Provider selection is configuration, not CRUD logic.
+
+## Example
+
+```rust,no_run
+use storexa::{Database, DatabaseConfig};
+
+# async fn example() -> storexa::Result<()> {
+let config = DatabaseConfig::from_env()?;
+let db = Database::connect(config).await?;
+
+db.health_check().await?;
+
+let mut transaction = db.begin().await?;
+// Applications execute their own SQL with SQLx here.
+transaction.rollback().await?;
+
+db.close().await;
+# Ok(())
+# }
+```
+
+`DatabaseConfig::from_env()` loads `.env` when present, then reads
+`STOREXA_DATABASE_URL` or `DATABASE_URL`, in that order. Connection URLs are
+redacted from debug output and are never emitted by Storexa's tracing spans.
+
+## Migrations
+
+Applications own their migration files and pass a SQLx migrator to Storexa:
+
+```rust,no_run
+use sqlx::migrate::Migrator;
+use storexa::Database;
+
+static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
+
+# async fn migrate(db: &Database) -> storexa::Result<()> {
+db.run_migrations(&MIGRATOR).await
+# }
 ```
 
 ## License
