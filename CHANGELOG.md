@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.2 - Unreleased
+
+### Added
+
+- Explicit environment-variable selection for application-scoped secrets.
+- Direct dotenv-file reads that do not mutate the process environment.
+- PostgreSQL URL validation with credential-safe errors.
+- Non-secret configuration-source metadata.
+- Configuration and roadmap documentation.
+
 ## 0.0.1 - 2026-08-06
 
 ### Added

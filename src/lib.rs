@@ -19,7 +19,7 @@ mod config;
 mod database;
 mod error;
 
-pub use config::DatabaseConfig;
+pub use config::{ConfigSource, DatabaseConfig};
 pub use database::{Database, Transaction};
 pub use error::{Result, StorexaError};
 pub use sqlx::migrate::Migrator;

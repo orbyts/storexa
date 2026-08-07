@@ -1,4 +1,11 @@
-use std::{env, fmt, time::Duration};
+use std::{
+    env, fmt,
+    path::{Path, PathBuf},
+    str::FromStr,
+    time::Duration,
+};
+
+use sqlx::postgres::PgConnectOptions;
 
 use crate::{Result, StorexaError};
 
@@ -7,6 +14,23 @@ const DEFAULT_MIN_CONNECTIONS: u32 = 0;
 const DEFAULT_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_IDLE_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 const DEFAULT_MAX_LIFETIME: Duration = Duration::from_secs(30 * 60);
+const DEFAULT_DATABASE_URL_VARIABLES: [&str; 2] = ["STOREXA_DATABASE_URL", "DATABASE_URL"];
+
+/// Describes where a database configuration obtained its secret URL.
+///
+/// This metadata contains only an environment-variable name or file path. It
+/// never contains the URL itself.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum ConfigSource {
+    /// The URL was supplied directly by application code.
+    Programmatic,
+    /// The URL was read from a process environment variable.
+    Environment { variable: String },
+    /// The URL was read directly from a dotenv file without modifying the
+    /// process environment.
+    Dotenv { path: PathBuf, variable: String },
+}
 
 /// PostgreSQL connection and pool configuration.
 #[derive(Clone)]
@@ -17,17 +41,17 @@ pub struct DatabaseConfig {
     acquire_timeout: Duration,
     idle_timeout: Option<Duration>,
     max_lifetime: Option<Duration>,
+    source: ConfigSource,
 }
 
 impl DatabaseConfig {
     /// Creates configuration from a PostgreSQL connection URL.
     pub fn from_url(database_url: impl Into<String>) -> Result<Self> {
-        let database_url = database_url.into();
-        if database_url.trim().is_empty() {
-            return Err(StorexaError::configuration(
-                "database URL must not be empty",
-            ));
-        }
+        Self::from_url_and_source(database_url.into(), ConfigSource::Programmatic)
+    }
+
+    fn from_url_and_source(database_url: String, source: ConfigSource) -> Result<Self> {
+        validate_database_url(&database_url)?;
 
         Ok(Self {
             database_url,
@@ -36,6 +60,7 @@ impl DatabaseConfig {
             acquire_timeout: DEFAULT_ACQUIRE_TIMEOUT,
             idle_timeout: Some(DEFAULT_IDLE_TIMEOUT),
             max_lifetime: Some(DEFAULT_MAX_LIFETIME),
+            source,
         })
     }
 
@@ -43,25 +68,94 @@ impl DatabaseConfig {
     ///
     /// `STOREXA_DATABASE_URL` takes precedence when both variables are set.
     pub fn from_env() -> Result<Self> {
-        let _ = dotenvy::dotenv();
+        if let Some(config) = first_available_environment_config()? {
+            return Ok(config);
+        }
 
-        let database_url = env::var("STOREXA_DATABASE_URL")
-            .or_else(|_| env::var("DATABASE_URL"))
-            .map_err(|_| StorexaError::configuration("set STOREXA_DATABASE_URL or DATABASE_URL"))?;
+        if let Ok(path) = dotenvy::dotenv()
+            && let Some(mut config) = first_available_environment_config()?
+        {
+            let variable = match &config.source {
+                ConfigSource::Environment { variable } => variable.clone(),
+                _ => unreachable!("environment lookup returns an environment source"),
+            };
+            config.source = ConfigSource::Dotenv { path, variable };
+            return Ok(config);
+        }
 
-        Self::from_url(database_url)
+        Err(StorexaError::configuration(
+            "set STOREXA_DATABASE_URL or DATABASE_URL",
+        ))
+    }
+
+    /// Reads a database URL from an explicitly named environment variable.
+    ///
+    /// This is useful when a host application or secret manager uses names
+    /// such as `PHOTARA_DEV_DATABASE_URL`.
+    pub fn from_env_var(variable: impl Into<String>) -> Result<Self> {
+        let variable = variable.into();
+        if variable.trim().is_empty() {
+            return Err(StorexaError::configuration(
+                "environment variable name must not be empty",
+            ));
+        }
+
+        let database_url = env::var(&variable).map_err(|_| {
+            StorexaError::configuration(format!(
+                "database URL environment variable {variable} is not set or is not valid Unicode"
+            ))
+        })?;
+
+        Self::from_url_and_source(database_url, ConfigSource::Environment { variable })
+    }
+
+    /// Reads a named database URL directly from a dotenv file.
+    ///
+    /// Unlike [`dotenvy::from_path`], this does not add any values to the
+    /// process environment.
+    pub fn from_dotenv_var(path: impl AsRef<Path>, variable: impl Into<String>) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+        let variable = variable.into();
+        if variable.trim().is_empty() {
+            return Err(StorexaError::configuration(
+                "dotenv variable name must not be empty",
+            ));
+        }
+
+        let entries = dotenvy::from_path_iter(&path).map_err(|_| {
+            StorexaError::configuration(format!("could not read dotenv file {}", path.display()))
+        })?;
+
+        for entry in entries {
+            let (key, value) = entry.map_err(|_| {
+                StorexaError::configuration(format!(
+                    "could not parse dotenv file {}",
+                    path.display()
+                ))
+            })?;
+            if key == variable {
+                return Self::from_url_and_source(value, ConfigSource::Dotenv { path, variable });
+            }
+        }
+
+        Err(StorexaError::configuration(format!(
+            "database URL variable {variable} was not found in dotenv file {}",
+            path.display()
+        )))
     }
 
     /// Overrides the database URL programmatically.
     pub fn with_database_url(mut self, database_url: impl Into<String>) -> Result<Self> {
         let database_url = database_url.into();
-        if database_url.trim().is_empty() {
-            return Err(StorexaError::configuration(
-                "database URL must not be empty",
-            ));
-        }
+        validate_database_url(&database_url)?;
         self.database_url = database_url;
+        self.source = ConfigSource::Programmatic;
         Ok(self)
+    }
+
+    /// Returns non-secret metadata describing where configuration was loaded.
+    pub fn source(&self) -> &ConfigSource {
+        &self.source
     }
 
     /// Sets the maximum number of connections in the SQLx pool.
@@ -148,19 +242,101 @@ impl fmt::Debug for DatabaseConfig {
             .field("acquire_timeout", &self.acquire_timeout)
             .field("idle_timeout", &self.idle_timeout)
             .field("max_lifetime", &self.max_lifetime)
+            .field("source", &self.source)
             .finish()
     }
 }
 
+fn first_available_environment_config() -> Result<Option<DatabaseConfig>> {
+    for variable in DEFAULT_DATABASE_URL_VARIABLES {
+        match env::var(variable) {
+            Ok(database_url) => {
+                return DatabaseConfig::from_url_and_source(
+                    database_url,
+                    ConfigSource::Environment {
+                        variable: variable.to_owned(),
+                    },
+                )
+                .map(Some);
+            }
+            Err(env::VarError::NotPresent) => {}
+            Err(env::VarError::NotUnicode(_)) => {
+                return Err(StorexaError::configuration(format!(
+                    "database URL environment variable {variable} is not valid Unicode"
+                )));
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn validate_database_url(database_url: &str) -> Result<()> {
+    if database_url.trim().is_empty() {
+        return Err(StorexaError::configuration(
+            "database URL must not be empty",
+        ));
+    }
+
+    if !database_url.starts_with("postgres://") && !database_url.starts_with("postgresql://") {
+        return Err(StorexaError::configuration(
+            "database URL is not a valid PostgreSQL connection URL",
+        ));
+    }
+
+    PgConnectOptions::from_str(database_url).map_err(|_| {
+        StorexaError::configuration("database URL is not a valid PostgreSQL connection URL")
+    })?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{fs, time::Duration};
 
-    use super::DatabaseConfig;
+    use super::{ConfigSource, DatabaseConfig};
 
     #[test]
     fn rejects_empty_urls() {
         assert!(DatabaseConfig::from_url("  ").is_err());
+    }
+
+    #[test]
+    fn rejects_non_postgresql_urls_without_echoing_them() {
+        let error = DatabaseConfig::from_url("https://user:secret@example.com")
+            .expect_err("non-PostgreSQL URLs must fail");
+        let output = error.to_string();
+        assert!(!output.contains("secret"));
+        assert!(!output.contains("example.com"));
+    }
+
+    #[test]
+    fn records_programmatic_source() {
+        let config = DatabaseConfig::from_url("postgresql://localhost/test").expect("valid config");
+        assert_eq!(config.source(), &ConfigSource::Programmatic);
+    }
+
+    #[test]
+    fn reads_one_secret_from_dotenv_without_exporting_it() {
+        let variable = format!("STOREXA_TEST_URL_{}", std::process::id());
+        let path = std::env::temp_dir().join(format!("storexa-{}.env", std::process::id()));
+        fs::write(
+            &path,
+            format!("UNRELATED=value\n{variable}=postgresql://localhost/test\n"),
+        )
+        .expect("write dotenv fixture");
+
+        let config =
+            DatabaseConfig::from_dotenv_var(&path, &variable).expect("load config from dotenv");
+        assert_eq!(
+            config.source(),
+            &ConfigSource::Dotenv {
+                path: path.clone(),
+                variable: variable.clone(),
+            }
+        );
+        assert!(std::env::var(&variable).is_err());
+
+        fs::remove_file(path).expect("remove dotenv fixture");
     }
 
     #[test]

@@ -8,7 +8,7 @@ async fn direct_connection_migrations_and_transactions() -> storexa::Result<()> 
     initialize_tracing();
 
     let db = Database::connect(
-        DatabaseConfig::from_env()?
+        DatabaseConfig::from_env_var("DATABASE_URL")?
             .with_min_connections(0)
             .with_max_connections(2),
     )
