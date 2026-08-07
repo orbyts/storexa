@@ -1,8 +1,8 @@
-# Roadmap to 0.1.0
+# Roadmap through 0.1.0
 
-The `0.0.x` series develops and validates Storexa's first supported API. A stage
-may be combined with the next when its scope is small; every published version
-must still be independently tested and recoverable by Git tag.
+The `0.0.x` Git checkpoints developed and validated Storexa's first supported
+API. Each stage remains recoverable by Git tag. Version 0.1.0 completes this
+roadmap and is the next crates.io release after 0.0.1.
 
 ## 0.0.2 — Configuration and secrets
 

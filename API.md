@@ -1,7 +1,7 @@
 # Public API contract
 
-Version 0.0.6 proposes the public surface for Storexa 0.1.0. The 0.1 release
-will apply semantic-versioning compatibility to this contract.
+Version 0.1.0 defines Storexa's first supported public surface. Storexa applies
+semantic-versioning compatibility to this contract throughout the 0.1 series.
 
 ## Configuration
 

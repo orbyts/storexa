@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Storexa is pre-1.0. Security fixes are applied to the latest development
-version. Version 0.1.0 will be the first supported crates.io release.
+The latest 0.1.x release receives security fixes. The earlier 0.0.x development
+checkpoints are unsupported.
 
 ## Reporting
 

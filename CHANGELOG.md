@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.0.6 - Unreleased
+## 0.1.0 - 2026-08-07
+
+Storexa's first supported release.
+
+### Included
+
+- Environment, dotenv, and programmatic PostgreSQL configuration.
+- SQLx connection pooling, health diagnostics, transactions, and
+  application-owned migrations.
+- Named connections and provider metadata without provider-specific SQL paths.
+- Consistent secret-safe errors and `tracing` instrumentation.
+- Verified Neon and PostgreSQL 18 integration coverage.
+- A documented public API, compatibility contract, and security policy.
+
+## 0.0.6 - 2026-08-07
 
 ### Added
 
