@@ -1,0 +1,12 @@
+[package]
+name = "storexa"
+version = "0.0.0"
+edition = "2024"
+description = "A clean, domain-agnostic persistence foundation for Rust applications."
+license = "MIT"
+repository = "https://github.com/suhailphotos/storexa"
+readme = "README.md"
+keywords = ["database", "persistence", "postgresql", "sqlx"]
+categories = ["database"]
+
+[dependencies]
