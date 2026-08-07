@@ -1,4 +1,4 @@
-use storexa::{Database, DatabaseConfig, Migrator};
+use storexa::{Database, DatabaseConfig, Migrator, PostgresProvider};
 
 static MIGRATOR: Migrator = sqlx::migrate!("./tests/migrations");
 
@@ -9,10 +9,15 @@ async fn direct_connection_migrations_and_transactions() -> storexa::Result<()> 
 
     let db = Database::connect(
         DatabaseConfig::from_env_var("DATABASE_URL")?
+            .with_name("development")?
+            .with_provider(PostgresProvider::Neon)?
             .with_min_connections(0)
             .with_max_connections(2),
     )
     .await?;
+
+    assert_eq!(db.name(), "development");
+    assert_eq!(db.provider(), &PostgresProvider::Neon);
 
     assert!(!db.stats().closed);
     drop(db.acquire().await?);
@@ -80,10 +85,14 @@ async fn pooled_connection_health_check() -> storexa::Result<()> {
 
     let db = Database::connect(
         DatabaseConfig::from_url(database_url)?
+            .with_name("development-pooled")?
+            .with_provider(PostgresProvider::Neon)?
             .with_min_connections(0)
             .with_max_connections(2),
     )
     .await?;
+    assert_eq!(db.name(), "development-pooled");
+    assert_eq!(db.provider(), &PostgresProvider::Neon);
     db.health_check().await?;
     db.close().await;
     assert!(db.stats().closed);

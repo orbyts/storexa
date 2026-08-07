@@ -1,6 +1,22 @@
 # Changelog
 
-## 0.0.3 - Unreleased
+## 0.0.4 - Unreleased
+
+### Added
+
+- Validated names for independently managed database connection pools.
+- Non-secret PostgreSQL provider metadata for Neon, Supabase, local,
+  generic, and other providers.
+- Connection names and providers in tracing spans and safe debug output.
+
+### Clarified
+
+- Provider metadata is descriptive and never changes SQL, migrations, or
+  connection behavior.
+- Storexa's PostgreSQL data plane remains separate from future provider
+  control-plane integrations.
+
+## 0.0.3 - 2026-08-07
 
 ### Added
 

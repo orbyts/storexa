@@ -4,7 +4,7 @@ Storexa is a small, domain-agnostic PostgreSQL persistence foundation for Rust
 applications. It uses SQLx and deliberately does not generate application SQL
 or model application entities.
 
-Version `0.0.3` provides:
+Version `0.0.4` provides:
 
 - environment and programmatic configuration
 - an asynchronous SQLx PostgreSQL pool
@@ -13,6 +13,7 @@ Version `0.0.3` provides:
 - application-owned migration execution
 - one consistent error type
 - `tracing` instrumentation
+- independently managed named connections with non-secret provider metadata
 
 Neon, Supabase, hosted PostgreSQL, and local PostgreSQL use the same Storexa
 PostgreSQL implementation. Provider selection is configuration, not CRUD logic.
@@ -66,6 +67,39 @@ let config = DatabaseConfig::from_dotenv_var(
 ```
 
 See [Configuration and secrets](CONFIGURATION.md) for the full contract.
+
+## Multiple connections and providers
+
+Applications create and own as many independent `Database` handles as they
+need. Names and providers are diagnostic metadata; they do not select a
+different SQL implementation.
+
+```rust,no_run
+use storexa::{Database, DatabaseConfig, PostgresProvider};
+
+# async fn connect_both() -> storexa::Result<()> {
+let primary = Database::connect(
+    DatabaseConfig::from_env_var("PHOTARA_DEV_DATABASE_URL")?
+        .with_name("primary")?
+        .with_provider(PostgresProvider::Neon)?,
+).await?;
+
+let archive = Database::connect(
+    DatabaseConfig::from_env_var("PHOTARA_ARCHIVE_DATABASE_URL")?
+        .with_name("archive")?
+        .with_provider(PostgresProvider::Supabase)?,
+).await?;
+
+assert_eq!(primary.name(), "primary");
+assert_eq!(archive.name(), "archive");
+# Ok(())
+# }
+```
+
+Storexa does not keep a global connection registry. The application decides
+how handles are stored, shared, and shut down. Provider project creation,
+branch management, and API credentials belong to a separate future control
+plane; database URLs remain sufficient for PostgreSQL access.
 
 ## Migrations
 

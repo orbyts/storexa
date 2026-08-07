@@ -18,11 +18,13 @@
 mod config;
 mod database;
 mod error;
+mod metadata;
 
 pub use config::{ConfigSource, DatabaseConfig};
 pub use database::{
     ConnectionLease, Database, DatabaseStats, HealthReport, MigrationReport, Transaction,
 };
 pub use error::{Result, StorexaError};
+pub use metadata::{DatabaseMetadata, PostgresProvider};
 pub use sqlx::migrate::Migrator;
 pub use sqlx::{PgPool, Postgres};

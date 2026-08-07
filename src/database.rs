@@ -7,7 +7,7 @@ use std::{
 use sqlx::{PgConnection, PgPool, Postgres, pool::PoolConnection, postgres::PgPoolOptions};
 use tracing::{debug, info, instrument};
 
-use crate::{DatabaseConfig, Result, StorexaError};
+use crate::{DatabaseConfig, DatabaseMetadata, PostgresProvider, Result, StorexaError};
 
 /// A PostgreSQL connection checked out from a [`Database`] pool.
 pub type ConnectionLease = PoolConnection<Postgres>;
@@ -99,6 +99,7 @@ impl fmt::Debug for Transaction {
 #[derive(Clone)]
 pub struct Database {
     pool: PgPool,
+    metadata: DatabaseMetadata,
 }
 
 impl Database {
@@ -108,12 +109,15 @@ impl Database {
         skip(config),
         fields(
             db.system = "postgresql",
+            db.connection.name = config.metadata().name(),
+            db.provider = %config.metadata().provider(),
             db.max_connections = config.max_connections(),
             db.min_connections = config.min_connections()
         )
     )]
     pub async fn connect(config: DatabaseConfig) -> Result<Self> {
         config.validate()?;
+        let metadata = config.metadata().clone();
 
         let pool = PgPoolOptions::new()
             .max_connections(config.max_connections())
@@ -126,7 +130,22 @@ impl Database {
             .map_err(StorexaError::Connection)?;
 
         info!("database pool connected");
-        Ok(Self { pool })
+        Ok(Self { pool, metadata })
+    }
+
+    /// Returns the non-secret identity attached to this connection pool.
+    pub fn metadata(&self) -> &DatabaseMetadata {
+        &self.metadata
+    }
+
+    /// Returns the application-defined connection name.
+    pub fn name(&self) -> &str {
+        self.metadata.name()
+    }
+
+    /// Returns descriptive provider metadata.
+    pub fn provider(&self) -> &PostgresProvider {
+        self.metadata.provider()
     }
 
     /// Returns the underlying SQLx PostgreSQL pool for application-owned SQL.
@@ -226,6 +245,7 @@ impl fmt::Debug for Database {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Database")
+            .field("metadata", &self.metadata)
             .field("stats", &self.stats())
             .finish()
     }

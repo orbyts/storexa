@@ -7,7 +7,7 @@ use std::{
 
 use sqlx::postgres::PgConnectOptions;
 
-use crate::{Result, StorexaError};
+use crate::{DatabaseMetadata, PostgresProvider, Result, StorexaError};
 
 const DEFAULT_MAX_CONNECTIONS: u32 = 10;
 const DEFAULT_MIN_CONNECTIONS: u32 = 0;
@@ -42,6 +42,7 @@ pub struct DatabaseConfig {
     idle_timeout: Option<Duration>,
     max_lifetime: Option<Duration>,
     source: ConfigSource,
+    metadata: DatabaseMetadata,
 }
 
 impl DatabaseConfig {
@@ -61,6 +62,7 @@ impl DatabaseConfig {
             idle_timeout: Some(DEFAULT_IDLE_TIMEOUT),
             max_lifetime: Some(DEFAULT_MAX_LIFETIME),
             source,
+            metadata: DatabaseMetadata::default(),
         })
     }
 
@@ -158,6 +160,26 @@ impl DatabaseConfig {
         &self.source
     }
 
+    /// Assigns an application-defined name to this connection pool.
+    pub fn with_name(mut self, name: impl Into<String>) -> Result<Self> {
+        let provider = self.metadata.provider().clone();
+        self.metadata = DatabaseMetadata::named(name)?.with_provider(provider)?;
+        Ok(self)
+    }
+
+    /// Attaches descriptive PostgreSQL provider metadata.
+    ///
+    /// Provider metadata does not alter connection or SQL behavior.
+    pub fn with_provider(mut self, provider: PostgresProvider) -> Result<Self> {
+        self.metadata = self.metadata.with_provider(provider)?;
+        Ok(self)
+    }
+
+    /// Returns the non-secret identity for this connection pool.
+    pub fn metadata(&self) -> &DatabaseMetadata {
+        &self.metadata
+    }
+
     /// Sets the maximum number of connections in the SQLx pool.
     pub fn with_max_connections(mut self, max_connections: u32) -> Self {
         self.max_connections = max_connections;
@@ -243,6 +265,7 @@ impl fmt::Debug for DatabaseConfig {
             .field("idle_timeout", &self.idle_timeout)
             .field("max_lifetime", &self.max_lifetime)
             .field("source", &self.source)
+            .field("metadata", &self.metadata)
             .finish()
     }
 }
