@@ -20,7 +20,9 @@ mod database;
 mod error;
 
 pub use config::{ConfigSource, DatabaseConfig};
-pub use database::{Database, Transaction};
+pub use database::{
+    ConnectionLease, Database, DatabaseStats, HealthReport, MigrationReport, Transaction,
+};
 pub use error::{Result, StorexaError};
 pub use sqlx::migrate::Migrator;
 pub use sqlx::{PgPool, Postgres};

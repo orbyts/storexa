@@ -21,7 +21,15 @@ pub enum StorexaError {
 
     /// A transaction could not begin.
     #[error("failed to begin PostgreSQL transaction")]
-    Transaction(#[source] sqlx::Error),
+    TransactionBegin(#[source] sqlx::Error),
+
+    /// A transaction could not commit.
+    #[error("failed to commit PostgreSQL transaction")]
+    TransactionCommit(#[source] sqlx::Error),
+
+    /// A transaction could not roll back.
+    #[error("failed to roll back PostgreSQL transaction")]
+    TransactionRollback(#[source] sqlx::Error),
 
     /// Application-owned SQL returned an error through a Storexa primitive.
     #[error("PostgreSQL query failed")]

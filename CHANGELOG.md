@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.0.2 - Unreleased
+## 0.0.3 - Unreleased
+
+### Added
+
+- Structured health reports with server version and query latency.
+- Structured migration reports with available migration count and elapsed time.
+- Pool statistics and explicit connection acquisition.
+- A Storexa transaction wrapper with classified commit and rollback errors.
+
+### Changed
+
+- `Database::close` now borrows the shared pool handle instead of consuming it.
+- `Database::run_migrations` returns a `MigrationReport`.
+
+## 0.0.2 - 2026-08-07
 
 ### Added
 

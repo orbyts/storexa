@@ -4,7 +4,7 @@ Storexa is a small, domain-agnostic PostgreSQL persistence foundation for Rust
 applications. It uses SQLx and deliberately does not generate application SQL
 or model application entities.
 
-Version `0.0.2` provides:
+Version `0.0.3` provides:
 
 - environment and programmatic configuration
 - an asynchronous SQLx PostgreSQL pool
@@ -26,7 +26,8 @@ use storexa::{Database, DatabaseConfig};
 let config = DatabaseConfig::from_env()?;
 let db = Database::connect(config).await?;
 
-db.health_check().await?;
+let health = db.health().await?;
+assert!(!health.server_version.is_empty());
 
 let mut transaction = db.begin().await?;
 // Applications execute their own SQL with SQLx here.
@@ -77,7 +78,9 @@ use storexa::Database;
 static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
 
 # async fn migrate(db: &Database) -> storexa::Result<()> {
-db.run_migrations(&MIGRATOR).await
+let report = db.run_migrations(&MIGRATOR).await?;
+assert_eq!(report.available, MIGRATOR.iter().count());
+# Ok(())
 # }
 ```
 

@@ -14,8 +14,14 @@ async fn direct_connection_migrations_and_transactions() -> storexa::Result<()> 
     )
     .await?;
 
-    db.health_check().await?;
-    db.run_migrations(&MIGRATOR).await?;
+    assert!(!db.stats().closed);
+    drop(db.acquire().await?);
+
+    let health = db.health().await?;
+    assert!(!health.server_version.is_empty());
+
+    let migration = db.run_migrations(&MIGRATOR).await?;
+    assert_eq!(migration.available, 1);
 
     let value = format!("rollback-{}", std::process::id());
     let before = count_value(&db, &value).await?;
@@ -36,7 +42,28 @@ async fn direct_connection_migrations_and_transactions() -> storexa::Result<()> 
     transaction.rollback().await?;
 
     assert_eq!(count_value(&db, &value).await?, before);
+
+    let committed_value = format!("commit-{}", std::process::id());
+    let committed_before = count_value(&db, &committed_value).await?;
+    let mut transaction = db.begin().await?;
+    sqlx::query("INSERT INTO storexa_smoke_test (value) VALUES ($1)")
+        .bind(&committed_value)
+        .execute(&mut *transaction)
+        .await?;
+    transaction.commit().await?;
+    assert_eq!(
+        count_value(&db, &committed_value).await?,
+        committed_before + 1
+    );
+
+    sqlx::query("DELETE FROM storexa_smoke_test WHERE value = $1")
+        .bind(&committed_value)
+        .execute(db.pool())
+        .await?;
+    assert_eq!(count_value(&db, &committed_value).await?, committed_before);
+
     db.close().await;
+    assert!(db.stats().closed);
     Ok(())
 }
 
@@ -59,6 +86,7 @@ async fn pooled_connection_health_check() -> storexa::Result<()> {
     .await?;
     db.health_check().await?;
     db.close().await;
+    assert!(db.stats().closed);
     Ok(())
 }
 
