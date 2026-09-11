@@ -1,7 +1,7 @@
 # Public API contract
 
-Version 0.1.0 defines Storexa's first supported public surface. Storexa applies
-semantic-versioning compatibility to this contract throughout the 0.1 series.
+Version 0.2.0 preserves the PostgreSQL 0.1.0 surface and adds explicit SQLite
+types. Storexa applies semantic-versioning compatibility throughout the 0.2 series.
 
 ## Configuration
 
@@ -55,6 +55,37 @@ Storexa re-exports `PgPool`, `Postgres`, and `Migrator` as conveniences. These
 are not abstractions over a homemade ORM. SQLx remains the query, type, and
 migration engine.
 
+## SQLite capability
+
+- `SqliteDatabaseConfig::from_path` accepts literal file paths, never SQLite URLs.
+  `in_memory` creates a private database. File creation is explicit; directories
+  are application-owned. `validate` checks options without I/O.
+- Builders configure pool limits/timeouts, file creation, foreign-key enforcement,
+  busy timeout, optional journal mode, synchronous policy, and diagnostic name.
+- `SqliteDatabase` provides `connect`, `name`, `pool`, `acquire`, `stats`, `health`,
+  `health_check`, `begin`, `run_migrations`, and `close`. Clone/close semantics
+  match PostgreSQL. `SqliteHealthReport` reports `sqlite_version` and latency.
+- `SqliteTransaction` dereferences to `SqliteConnection` and provides `commit`
+  and `rollback`. `begin` uses SQLite's deferred transaction semantics; it does
+  not claim that a writer lock has already been acquired.
+- `SqliteResult<T>` uses `SqliteError`, including SQLite-specific query conversion
+  through `From<sqlx::Error>`. The PostgreSQL conversion remains unchanged.
+- `SqlitePool`, `Sqlite`, `SqliteJournalMode`, `SqliteSynchronous` are convenience
+  SQLx re-exports. `DatabaseStats` and `MigrationReport` are shared value reports.
+
+In-memory pools require exactly one retained connection with no idle/lifetime
+recycling. They are ephemeral even while a pool handle exists if its connection
+is lost or explicitly closed through SQLx. File pools may grow, but SQLite still
+has only one writer at a time. Raw SQLx access lets applications change connection
+state; Storexa settings describe initialization, not enforced isolation from
+application SQL. Applications own migration serialization across independent
+processes/pools and any backup, recovery, or synchronization protocol.
+
+SQLite paths are redacted in Storexa debug/tracing/error display; SQLx statement
+logging is disabled for Storexa-created SQLite connections. Error sources remain
+available for deliberate inspection, and direct SQLx query errors are not redacted
+unless converted into `SqliteError`. Diagnostic names must contain no secrets.
+
 ## Explicitly deferred
 
 - Generated CRUD and application entities
@@ -62,4 +93,5 @@ migration engine.
 - Provider project or branch creation
 - A public cross-provider transfer trait
 - Supabase transaction-pooler support
-- SQLite and non-PostgreSQL backends
+- Engines other than PostgreSQL and SQLite
+- SQLite network-filesystem coordination, synchronization, backup, and SQL translation

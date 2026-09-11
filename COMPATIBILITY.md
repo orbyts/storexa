@@ -1,7 +1,7 @@
-# PostgreSQL compatibility
+# Database compatibility
 
-Storexa 0.0.5 has one data-plane implementation: SQLx 0.9's native PostgreSQL
-driver. Provider metadata is descriptive and never selects different CRUD,
+Storexa 0.2.0 uses SQLx 0.9's native PostgreSQL and SQLite drivers through
+separate public types. PostgreSQL provider metadata never selects different CRUD,
 transaction, or migration code.
 
 ## Compatibility contract
@@ -46,8 +46,33 @@ same extensions, roles, collation versions, or administrative privileges.
 Applications own those requirements and must encode portable assumptions in
 their migrations.
 
+## SQLite compatibility
+
+SQLite uses SQLx's bundled SQLite engine. In-memory and local file databases are
+covered by the ordinary integration suite: migration application/checksums,
+commit/rollback/drop rollback, file reopen, independent memory pools, connection
+settings, lock contention, acquisition timeout, and closed-pool failures.
+
+WAL is opt-in and intended for a local filesystem. SQLite documents that WAL does
+not work over network filesystems. Storexa does not detect mounts or add locking,
+leases, or durability protocols for SMB/NFS. Merely choosing rollback journaling
+does not establish support for shared network storage.
+
+File journal mode is preserved unless explicitly configured; SQLite may persist
+WAL mode in the file. Changes can need exclusive access. Connection settings are
+applied to every connection. More pooled connections do not create simultaneous
+SQLite writers. Busy timeout controls lock waiting; acquire timeout controls
+waiting for a pool connection. SQLite migrations should be coordinated by the
+application before serving work.
+
+PostgreSQL and SQLite need engine-specific schemas/migrations. Storexa does not
+promise equivalent SQL types, isolation levels, locking, or migration concurrency.
+
 ## Primary references
 
 - [SQLx PostgreSQL driver](https://docs.rs/sqlx/0.9.0/sqlx/postgres/)
 - [Neon connection pooling](https://neon.com/docs/connect/connection-pooling)
 - [Supabase PostgreSQL connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
+- [SQLx SQLite driver](https://docs.rs/sqlx/0.9.0/sqlx/sqlite/)
+- [SQLite WAL restrictions](https://www.sqlite.org/wal.html)
+- [SQLite network filesystem caveats](https://www.sqlite.org/useovernet.html)

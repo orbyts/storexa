@@ -22,6 +22,12 @@ adding a Storexa dependency on any of them.
 
 ## Precedence
 
+The sources above configure PostgreSQL only. SQLite uses explicit
+`SqliteDatabaseConfig::from_path(path)` or `SqliteDatabaseConfig::in_memory()`;
+it does not implicitly read an environment variable, create directories, or
+interpret URI options embedded in a path. Hosts choose their own configuration
+and resolve relative paths against the working directory before connecting.
+
 The conventional `from_env()` lookup order is:
 
 1. Existing `STOREXA_DATABASE_URL`
@@ -61,3 +67,23 @@ environment.
 `$XDG_CONFIG_HOME/storexa/config.toml` is reserved for a future Storexa CLI or
 for explicitly requested shared machine defaults. Its absence has no effect on
 the library.
+
+## SQLite defaults and durability
+
+Both SQLite constructors default to one retained connection, a 30-second pool
+acquisition timeout, a five-second SQLite busy timeout, foreign keys enabled,
+FULL synchronous mode, and no journal-mode override. File creation is disabled
+until `with_create_if_missing(true)`. Busy timeout accepts whole milliseconds
+from zero through `i32::MAX`; zero means no lock waiting.
+
+File pools may change connection counts and recycling timeouts. Memory pools
+require exactly one connection and disabled idle/lifetime recycling; replacing
+or closing that physical connection loses the database. Each independently
+created in-memory pool has separate contents.
+
+`with_journal_mode(Some(SqliteJournalMode::Wal))` explicitly opts into WAL for a
+local file. `None` preserves existing mode. `with_synchronous` accepts SQLx's
+SQLite policies; reducing FULL durability is the application's choice. SQLite
+file names are redacted from Storexa diagnostics. Names are diagnostic labels,
+not paths, and must not contain secrets. Raw driver error sources and direct
+SQLx errors require the host's own logging policy.

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 - 2026-09-11
+
+- Added concrete `SqliteDatabaseConfig`, `SqliteDatabase`, connection lease,
+  transaction, health, result and error APIs using SQLx 0.9 SQLite.
+- Added explicit file/in-memory configuration, pool lifecycle, busy timeout,
+  foreign keys, journal and synchronous options with validation.
+- Added SQLite application migration execution, redacted diagnostics, and an
+  application-owned SQL example.
+- Added SQLite migration/checksum, persistence, transaction, configuration,
+  contention, acquisition, lifecycle and redaction tests.
+- Preserved the existing PostgreSQL 0.1.0 public API and integration suite.
+- Documented local-filesystem limits and the distinction between engines;
+  Storexa remains free of domain models and synchronization policy.
+
 ## 0.1.0 - 2026-08-07
 
 Storexa's first supported release.

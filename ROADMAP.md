@@ -1,8 +1,8 @@
-# Roadmap through 0.1.0
+# Roadmap through 0.2.0
 
 The `0.0.x` Git checkpoints developed and validated Storexa's first supported
-API. Each stage remains recoverable by Git tag. Version 0.1.0 completes this
-roadmap and is the next crates.io release after 0.0.1.
+API. Each stage remains recoverable by Git tag. Version 0.2.0 extends that API
+with a separate SQLite capability while retaining the PostgreSQL contract.
 
 ## 0.0.2 — Configuration and secrets
 
@@ -55,3 +55,16 @@ roadmap and is the next crates.io release after 0.0.1.
 
 These may be explored later as separate layers once real application usage
 demonstrates the correct API.
+
+## 0.2.0 — SQLite capability
+
+- SQLx 0.9 SQLite through concrete configuration, pool, lease, transaction,
+  health and error types alongside the unchanged PostgreSQL API.
+- Explicit local-file and isolated in-memory lifecycles, validated timeouts,
+  foreign keys, journal and synchronous options.
+- Application-owned SQL and migrations; local-file persistence and failure tests.
+- Redacted SQLite diagnostics and documented network-filesystem limitations.
+
+No ORM, application entities, cross-engine SQL translation, cloud synchronization,
+network-share writer protocol, or global registry is part of this release.
+Provider control planes and data-transfer tooling remain separate future work.
